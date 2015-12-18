@@ -1,4 +1,4 @@
-# Testdoir Akaze fork
+# Testdoir Akaze Fork
 
 This is a fork of the official
 [Akaze](https://github.com/pablofdezalc/akaze.git) repo, with added
