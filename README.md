@@ -47,7 +47,7 @@ Additionally, the library `libAKAZE[.a, .lib]` will be created in the folder `li
 If there is any error in the compilation, perhaps some libraries are missing.
 Please check the Library dependencies section.
 
-## Using Compiled Binaries
+## Using the Compiled Binaries
 
 Copy the generated binaries from build/bin/ directory to your
 image-recognition/akaze/bin/ directory. Checkout the [image
