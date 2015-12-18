@@ -19,12 +19,7 @@
  * @author Pablo F. Alcantarilla
  */
 
-#include "./lib/AKAZE.h"
-
-// OpenCV
-#include <opencv2/imgproc/imgproc.hpp>
-#include <opencv2/highgui/highgui.hpp>
-
+#include "AKAZE.h"
 using namespace std;
 
 /* ************************************************************************* */
@@ -40,10 +35,11 @@ const float DRATIO = 0.80f;                 ///< NNDR Matching value
  * @param img_path1 Path for the first input image
  * @param img_path2 Path for the second input image
  * @param homography_path Path for the file that contains the ground truth homography
+ * @param json_flag Flag indication for --json conmmand line argument
  */
 int parse_input_options(AKAZEOptions &options, std::string& img_path1,
                         std::string& img_path2, std::string& homography_path,
-                        int argc, char *argv[]);
+                        int argc, char *argv[], bool& json_flag, std::string& json_file);
 
 /* ************************************************************************* */
 int main(int argc, char *argv[]) {
@@ -54,6 +50,9 @@ int main(int argc, char *argv[]) {
   string img_path1, img_path2, homography_path;
   float ratio = 0.0, rfactor = .60;
   int nkpts1 = 0, nkpts2 = 0, nmatches = 0, ninliers = 0, noutliers = 0;
+  // Testdroid var
+  bool jsonFlag = false;
+  std::string jsonFile = "";
 
   vector<cv::KeyPoint> kpts1, kpts2;
   vector<vector<cv::DMatch> > dmatches;
@@ -65,8 +64,9 @@ int main(int argc, char *argv[]) {
   double takaze = 0.0, tmatch = 0.0;
 
   // Parse the input command line options
-  if (parse_input_options(options,img_path1,img_path2,homography_path,argc,argv))
+  if (parse_input_options(options,img_path1,img_path2,homography_path,argc,argv,jsonFlag, jsonFile)) {
     return -1;
+  }
 
   // Read image 1 and if necessary convert to grayscale.
   img1 = cv::imread(img_path1, 0);
@@ -93,8 +93,12 @@ int main(int argc, char *argv[]) {
 
   // Color images for results visualization
   img1_rgb = cv::Mat(cv::Size(img1.cols, img1.rows), CV_8UC3);
-  img2_rgb = cv::Mat(cv::Size(img2.cols, img1.rows), CV_8UC3);
-  img_com = cv::Mat(cv::Size(img1.cols*2, img1.rows), CV_8UC3);
+  img2_rgb = cv::Mat(cv::Size(img2.cols, img2.rows), CV_8UC3);
+
+  int combined_width = img1.cols + img2.cols;
+  int combined_height = img1.rows > img2.rows ? img1.rows : img2.rows;
+
+  img_com = cv::Mat(cv::Size(combined_width,combined_height), CV_8UC3);
   img_r = cv::Mat(cv::Size(img_com.cols*rfactor, img_com.rows*rfactor), CV_8UC3);
 
   // Create the first AKAZE object
@@ -155,27 +159,51 @@ int main(int argc, char *argv[]) {
   cvtColor(img1, img1_rgb, cv::COLOR_GRAY2BGR);
   cvtColor(img2, img2_rgb, cv::COLOR_GRAY2BGR);
 
-  // Show matching statistics
-  cout << "Number of Keypoints Image 1: " << nkpts1 << endl;
-  cout << "Number of Keypoints Image 2: " << nkpts2 << endl;
-  cout << "A-KAZE Features Extraction Time (ms): " << takaze << endl;
-  cout << "Matching Descriptors Time (ms): " << tmatch << endl;
-  cout << "Number of Matches: " << nmatches << endl;
-  cout << "Number of Inliers: " << ninliers << endl;
-  cout << "Number of Outliers: " << noutliers << endl;
-  cout << "Inliers Ratio: " << ratio << endl << endl;
+  if(jsonFlag) { // Testdroid: save matching info to map, pass map to display_json()
+	  std::map<std::string, double> info;
+	  float ufactor = 0.0, vfactor = 0.0;
 
-  draw_keypoints(img1_rgb, kpts1);
-  draw_keypoints(img2_rgb, kpts2);
-  draw_inliers(img1_rgb, img2_rgb, img_com, inliers);
-  cv::namedWindow("Inliers", cv::WINDOW_NORMAL);
-  cv::imshow("Inliers",img_com);
-  cv::waitKey(0);
+	  ufactor = (float)(img1.cols)/(float)(img2.cols);
+	  vfactor = (float)(img1.rows)/(float)(img2.rows);
+
+	  info.insert(std::pair<std::string, double>("number-keypoints-img1", nkpts1));
+	  info.insert(std::pair<std::string, double>("number-keypoints-img2", nkpts2));
+	  info.insert(std::pair<std::string, double>("features-extraction-time", takaze));
+	  info.insert(std::pair<std::string, double>("matching-descriptors-time", tmatch));
+	  info.insert(std::pair<std::string, double>("number-of-matches", nmatches));
+	  info.insert(std::pair<std::string, double>("number-of-inliers", ninliers));
+	  info.insert(std::pair<std::string, double>("number-of-outliers", noutliers));
+	  info.insert(std::pair<std::string, double>("inliers-ratio", ratio));
+	  info.insert(std::pair<std::string, double>("ufactor", ufactor));
+	  info.insert(std::pair<std::string, double>("vfactor", vfactor));
+
+	  display_json(info, inliers, img1.cols, jsonFile);
+  }
+  else { // AKAZE default behaviors
+	  // Show matching statistics
+	  cout << "Number of Keypoints Image 1: " << nkpts1 << endl;
+	  cout << "Number of Keypoints Image 2: " << nkpts2 << endl;
+	  cout << "A-KAZE Features Extraction Time (ms): " << takaze << endl;
+	  cout << "Matching Descriptors Time (ms): " << tmatch << endl;
+	  cout << "Number of Matches: " << nmatches << endl;
+	  cout << "Number of Inliers: " << ninliers << endl;
+	  cout << "Number of Outliers: " << noutliers << endl;
+	  cout << "Inliers Ratio: " << ratio << endl << endl;
+
+	  draw_keypoints(img1_rgb,kpts1);
+	  draw_keypoints(img2_rgb,kpts2);
+	  draw_inliers(img1_rgb,img2_rgb,img_com,inliers);
+	  cv::namedWindow("Inliers", CV_WINDOW_NORMAL);
+	  cv::imshow("Inliers",img_com);
+	  cv::waitKey(0);
+
+	  imwrite("test.jpg", img_com);
+  }
 }
 
 /* ************************************************************************* */
 int parse_input_options(AKAZEOptions& options, std::string& img_path1, std::string& img_path2,
-                        std::string& homography_path, int argc, char *argv[]) {
+                        std::string& homography_path, int argc, char *argv[], bool& json_flag, std::string& json_file) {
 
   // If there is only one argument return
   if (argc == 1) {
@@ -305,6 +333,14 @@ int parse_input_options(AKAZEOptions& options, std::string& img_path1, std::stri
       }
       else if (!strcmp(argv[i],"--verbose")) {
         options.verbosity = true;
+      }
+      // Testdroid --json flag
+      else if (!strcmp(argv[i], "--json")) {
+    	  json_flag = true;
+    	  int j = i + 1;
+    	  if (j < argc) {
+    		  json_file = argv[j];
+    	  }
       }
       else if (!strncmp(argv[i],"--",2))
         cerr << "Unknown command "<<argv[i] << endl;

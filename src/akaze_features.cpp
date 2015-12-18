@@ -20,11 +20,7 @@
  * @author Pablo F. Alcantarilla, Jesus Nuevo
  */
 
-#include "./lib/AKAZE.h"
-
-// OpenCV
-#include <opencv2/imgproc.hpp>
-#include <opencv2/highgui.hpp>
+#include "AKAZE.h"
 
 using namespace std;
 
@@ -91,7 +87,7 @@ int main(int argc, char *argv[]) {
 
   // Summarize the computation times.
   evolution.Show_Computation_Times();
-
+  evolution.Save_Scale_Space();
   cout << "Number of points: " << kpts.size() << endl;
   cout << "Time Detector: " << tdet << " ms" << endl;
   cout << "Time Descriptor: " << tdesc << " ms" << endl;
@@ -106,7 +102,7 @@ int main(int argc, char *argv[]) {
   draw_keypoints(img_rgb, kpts);
 
   cv::namedWindow("A-KAZE", cv::WINDOW_AUTOSIZE);
-  cv::imshow("A-KAZE", img_rgb);
+  cv::imshow(img_path, img_rgb);
   cv::waitKey(0);
 }
 

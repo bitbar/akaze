@@ -42,8 +42,12 @@ set(AKAZE_SRCS
     lib/nldiffusion_functions.h  lib/nldiffusion_functions.cpp
     lib/utils.h                  lib/utils.cpp)
 
+set(Jsoncpp_LIB
+    /usr/local/lib/libjsoncpp.a)
+
 add_library(AKAZE ${AKAZE_SRCS})
 target_link_libraries(AKAZE ${OpenCV_LIBS})
+target_link_libraries(AKAZE ${Jsoncpp_LIB})
 
 # Feature detector program
 add_executable(akaze_features akaze_features.cpp)
