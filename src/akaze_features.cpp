@@ -238,6 +238,16 @@ int parse_input_options(AKAZEOptions& options, std::string& img_path,
           options.save_scale_space = (bool)atoi(argv[i]);
         }
       }
+      else if (!strcmp(argv[i],"--show_results")) {
+        i = i+1;
+        if (i >= argc) {
+          cerr << "Error introducing input options!!" << endl;
+          return -1;
+        }
+        else {
+          options.show_results = (bool)atoi(argv[i]);
+        }
+      }
       else if (!strcmp(argv[i],"--verbose")) {
         options.verbosity = true;
       }

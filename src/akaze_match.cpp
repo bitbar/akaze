@@ -1,9 +1,8 @@
 //=============================================================================
 //
 // akaze_match.cpp
-// Authors: Pablo F. Alcantarilla (1), Jesus Nuevo (2)
-// Institutions: Toshiba Research Europe Ltd (1)
-//               TrueVision Solutions (2)
+// Authors: Pablo F. Alcantarilla, Jesus Nuevo (2)
+// Institutions: TrueVision Solutions (2)
 // Date: 07/10/2014
 // Email: pablofdezalc@gmail.com
 //
@@ -20,6 +19,12 @@
  */
 
 #include "AKAZE.h"
+#include "./lib/AKAZE.h"
+
+// OpenCV
+#include <opencv2/imgproc.hpp>
+#include <opencv2/highgui.hpp>
+
 using namespace std;
 
 /* ************************************************************************* */
@@ -329,6 +334,16 @@ int parse_input_options(AKAZEOptions& options, std::string& img_path1, std::stri
           if (options.descriptor_size < 0) {
             options.descriptor_size = 0;
           }
+        }
+      }
+      else if (!strcmp(argv[i],"--show_results")) {
+        i = i+1;
+        if (i >= argc) {
+          cerr << "Error introducing input options!!" << endl;
+          return -1;
+        }
+        else {
+          options.show_results = (bool)atoi(argv[i]);
         }
       }
       else if (!strcmp(argv[i],"--verbose")) {
