@@ -21,7 +21,9 @@
  */
 
 #include "AKAZE.h"
-#include <opencv2/highgui/highgui.hpp>
+
+// OpenCV
+#include <opencv/cxmisc.h>
 
 using namespace std;
 using namespace libAKAZE;
@@ -207,6 +209,12 @@ void AKAZE::Compute_Multiscale_Derivatives() {
     compute_scharr_derivatives(evolution_[i].Lx, evolution_[i].Lxx, 1, 0, sigma_size_);
     compute_scharr_derivatives(evolution_[i].Ly, evolution_[i].Lyy, 0, 1, sigma_size_);
     compute_scharr_derivatives(evolution_[i].Lx, evolution_[i].Lxy, 0, 1, sigma_size_);
+
+    evolution_[i].Lx = evolution_[i].Lx*((sigma_size_));
+    evolution_[i].Ly = evolution_[i].Ly*((sigma_size_));
+    evolution_[i].Lxx = evolution_[i].Lxx*((sigma_size_)*(sigma_size_));
+    evolution_[i].Lxy = evolution_[i].Lxy*((sigma_size_)*(sigma_size_));
+    evolution_[i].Lyy = evolution_[i].Lyy*((sigma_size_)*(sigma_size_));
   }
 
   t2 = cv::getTickCount();
@@ -224,9 +232,6 @@ void AKAZE::Compute_Determinant_Hessian_Response() {
     if (options_.verbosity == true)
       cout << "Computing detector response. Determinant of Hessian. Evolution time: " << evolution_[i].etime << endl;
 
-    float ratio = pow(2.0f,(float)evolution_[i].octave);
-    int sigma_size = fRound(evolution_[i].esigma*options_.derivative_factor/ratio);
-    int sigma_size_quat = sigma_size*sigma_size*sigma_size*sigma_size;
 
     for (int ix = 0; ix < evolution_[i].Ldet.rows; ix++) {
       const float* lxx = evolution_[i].Lxx.ptr<float>(ix);
@@ -234,7 +239,7 @@ void AKAZE::Compute_Determinant_Hessian_Response() {
       const float* lyy = evolution_[i].Lyy.ptr<float>(ix);
       float* ldet = evolution_[i].Ldet.ptr<float>(ix);
       for (int jx = 0; jx < evolution_[i].Ldet.cols; jx++)
-        ldet[jx] = (lxx[jx]*lyy[jx]-lxy[jx]*lxy[jx])*sigma_size_quat;
+        ldet[jx] = lxx[jx]*lyy[jx]-lxy[jx]*lxy[jx];
     }
   }
 }
@@ -297,11 +302,8 @@ void AKAZE::Find_Scale_Space_Extrema(std::vector<cv::KeyPoint>& kpts) {
 
             if ((point.class_id-1) == kpts_aux[ik].class_id ||
                 point.class_id == kpts_aux[ik].class_id) {
-
-              dist = (point.pt.x*ratio-kpts_aux[ik].pt.x)*(point.pt.x*ratio-kpts_aux[ik].pt.x) +
-                     (point.pt.y*ratio-kpts_aux[ik].pt.y)*(point.pt.y*ratio-kpts_aux[ik].pt.y);
-
-              if (dist <= point.size*point.size) {
+              dist = sqrt(pow(point.pt.x*ratio-kpts_aux[ik].pt.x,2)+pow(point.pt.y*ratio-kpts_aux[ik].pt.y,2));
+              if (dist <= point.size) {
                 if (point.response > kpts_aux[ik].response) {
                   id_repeated = ik;
                   is_repeated = true;
@@ -330,14 +332,14 @@ void AKAZE::Find_Scale_Space_Extrema(std::vector<cv::KeyPoint>& kpts) {
 
             if (is_out == false) {
               if (is_repeated == false) {
-                point.pt.x = point.pt.x*ratio + .5*(ratio-1.0);
-                point.pt.y = point.pt.y*ratio + .5*(ratio-1.0);
+                point.pt.x *= ratio;
+                point.pt.y *= ratio;
                 kpts_aux.push_back(point);
                 npoints++;
               }
               else {
-                point.pt.x = point.pt.x*ratio + .5*(ratio-1.0);
-                point.pt.y = point.pt.y*ratio + .5*(ratio-1.0);
+                point.pt.x *= ratio;
+                point.pt.y *= ratio;
                 kpts_aux[id_repeated] = point;
               }
             } // if is_out
@@ -428,8 +430,8 @@ void AKAZE::Do_Subpixel_Refinement(std::vector<cv::KeyPoint>& kpts) {
       kpts[i].pt.x = x + dst(0);
       kpts[i].pt.y = y + dst(1);
       int power = powf(2, evolution_[kpts[i].class_id].octave);
-      kpts[i].pt.x = kpts[i].pt.x*power + .5*(power-1);
-      kpts[i].pt.y = kpts[i].pt.y*power + .5*(power-1);
+      kpts[i].pt.x *= power;
+      kpts[i].pt.y *= power;
       kpts[i].angle = 0.0;
 
       // In OpenCV the size of a keypoint its the diameter
@@ -599,7 +601,8 @@ void AKAZE::Compute_Main_Orientation(cv::KeyPoint& kpt) const {
         sumX+=resX[k];
         sumY+=resY[k];
       }
-      else if (ang2 < ang1 && ((ang > 0 && ang < ang2) || (ang > ang1 && ang < 2.0*CV_PI))) {
+      else if (ang2 < ang1 &&
+               ((ang > 0 && ang < ang2) || (ang > ang1 && ang < 2.0*CV_PI) )) {
         sumX+=resX[k];
         sumY+=resY[k];
       }
@@ -1185,12 +1188,15 @@ void AKAZE::MLDB_Binary_Comparisons(float* values, unsigned char* desc,
                                     int count, int& dpos) const {
 
   int nr_channels = options_.descriptor_channels;
+  int* ivalues = (int*) values;
+  for(int i = 0; i < count * nr_channels; i++)
+    ivalues[i] = CV_TOGGLE_FLT(ivalues[i]);
 
   for(int pos = 0; pos < nr_channels; pos++) {
     for (int i = 0; i < count; i++) {
-      float ival = values[nr_channels * i + pos];
+      int ival = ivalues[nr_channels * i + pos];
       for (int j = i + 1; j < count; j++) {
-        int res = ival > values[nr_channels * j + pos];
+        int res = ival > ivalues[nr_channels * j + pos];
         desc[dpos >> 3] |= (res << (dpos & 7));
         dpos++;
       }
