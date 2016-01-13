@@ -87,8 +87,8 @@ void draw_keypoints(cv::Mat& img, const std::vector<cv::KeyPoint>& kpts) {
     x = (int)(kpts[i].pt.x+.5);
     y = (int)(kpts[i].pt.y+.5);
     radius = kpts[i].size/2.0;
-    cv::circle(img, cv::Point(x,y), radius*2.50, cv::Scalar(0,255,0), 1);
-    cv::circle(img, cv::Point(x,y), 1.0, cv::Scalar(0,0,255), -1);
+    cv::circle(img, cv::Point(x,y), radius*2.50, CV_RGB(0,255,0), 1);
+    cv::circle(img, cv::Point(x,y), 1.0, CV_RGB(0,0,255), -1);
   }
 }
 
@@ -279,9 +279,13 @@ void draw_inliers(const cv::Mat& img1, const cv::Mat& img2, cv::Mat& img_com,
   for (size_t i = 0; i < ptpairs.size(); i+= 2) {
     x1 = (int)(ptpairs[i].x+.5);
     y1 = (int)(ptpairs[i].y+.5);
-    x2 = (int)(ptpairs[i+1].x*ufactor+img1.cols+.5);
-    y2 = (int)(ptpairs[i+1].y*vfactor+.5);
-    cv::line(img_com, cv::Point(x1,y1), cv::Point(x2,y2), cv::Scalar(255,0,0), 2);
+    
+    //x2 = (int)(ptpairs[i+1].x*ufactor+img1.cols+.5);
+    //y2 = (int)(ptpairs[i+1].y*vfactor+.5);
+    x2 = (int)(ptpairs[i+1].x+img1.cols+.5);
+    y2 = (int)(ptpairs[i+1].y+.5);
+	printf("KPP: %d %d %d %d\n", x1, y1, x2, y2);
+    cv::line(img_com, cv::Point(x1,y1), cv::Point(x2,y2), CV_RGB(255,0,0),2);
   }
 }
 
@@ -327,11 +331,11 @@ void draw_inliers(const cv::Mat& img1, const cv::Mat& img2, cv::Mat& img_com,
     y2 = (int)(ptpairs[i+1].y*vfactor+.5);
 
     if (color == 0)
-      cv::line(img_com, cv::Point(x1,y1), cv::Point(x2,y2), cv::Scalar(255,255,0), 2);
+      cv::line(img_com, cv::Point(x1,y1), cv::Point(x2,y2), CV_RGB(255,255,0), 2);
     else if (color == 1)
-      cv::line(img_com, cv::Point(x1,y1), cv::Point(x2,y2), cv::Scalar(255,0,0), 2);
+      cv::line(img_com, cv::Point(x1,y1), cv::Point(x2,y2), CV_RGB(255,0,0), 2);
     else if (color == 2)
-      cv::line(img_com, cv::Point(x1,y1), cv::Point(x2,y2), cv::Scalar(0,0,255), 2);
+      cv::line(img_com, cv::Point(x1,y1), cv::Point(x2,y2), CV_RGB(0,0,255), 2);
   }
 }
 
@@ -466,4 +470,64 @@ void show_input_options_help(int example) {
   cout_help() << " " << "1 -> show detection results." << endl;
   cout_help() << " " << "0 -> don't show detection results" << endl;
   cout_help() << endl;
+
+  // Display and save matching info in JSON - Testdroid
+  cout_help() << "--json " << "Display matching info in JSON format." << endl;
+  cout_help() << " " << "Save json file to a given path. A results.json is saved to project root if file name is not given." << endl;
+  cout_help() << " " << "Value: a file path and name with .json extension." << endl;
+  cout_help() << endl;
+}
+
+/* ************************************************************************* */
+// *** Testdroid ***
+void display_json(const std::map<std::string, double>& info,
+		const std::vector<cv::Point2f>& ptpairs, int img1Cols, std::string& json_file) {
+	cout << "[display_json] JSON output >>>>>> " << endl;
+
+	// Local variables
+	Json::Value jsonRoot;
+	Json::Value jsonArray;
+	Json::StyledWriter styledWriter;
+	std::ofstream fileStream;
+	std::string jsonFile = "../../results.json";
+	std::map<std::string, double>::const_iterator i;
+
+	// Create empty array
+	jsonRoot["keypoint-pairs"] = Json::Value(Json::arrayValue);
+
+	// Add info to json object
+	for (i = info.begin(); i != info.end(); i++) {
+		jsonRoot[i->first] = i->second;
+	}
+
+	// Insert key points to json array
+	for (size_t i = 0; i < ptpairs.size(); i += 2) {
+		jsonArray["x1"] = (int) (ptpairs[i].x + .5);
+		jsonArray["y1"] = (int) (ptpairs[i].y + .5);
+		jsonArray["x2"] = (int) (ptpairs[i + 1].x + img1Cols + .5);
+		jsonArray["y2"] = (int) (ptpairs[i + 1].y + .5);
+		jsonRoot["keypoint-pairs"].append(jsonArray);
+	}
+
+	// Output json to std output
+	std::string jsonString = styledWriter.write(jsonRoot);
+	std::cout << jsonString;
+
+	// Write info to json file
+	if(json_file!="") {
+		jsonFile = json_file;
+	}
+
+	fileStream.open(jsonFile);
+	if(fileStream.is_open()) {
+		fileStream << styledWriter.write(jsonRoot);
+		std::cout << "JSON file is saved to " << jsonFile << std::endl;
+	}
+	else {
+		cerr << "Error in open json file!!" << endl;
+	}
+
+	fileStream.close();
+
+	std::cout << "[display_json] <<<<<< " << std::endl;
 }

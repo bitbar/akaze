@@ -16,6 +16,10 @@
 #include <iostream>
 #include <iomanip>
 
+// Testdroid
+#include <map>
+#include "jsoncpp/json/json.h"
+
 /* ************************************************************************* */
 // Stringify common types such as int, double and others.
 template <typename T>
@@ -115,3 +119,10 @@ bool read_homography(const std::string& hFile, cv::Mat& H1toN);
 /// This function shows the possible command line configuration options
 void show_input_options_help(int example);
 
+// *** Testdroid ***
+/// This function display two images matching info in JSON format and save it to JSON file
+/// @param info Information of image matching
+/// @param ptpairs Vector of point pairs with the set of inliers
+/// @param img1Cols Colum number in first image
+/// @param json_file A json file to store matching info
+void display_json(const std::map<std::string, double>& info, const std::vector<cv::Point2f>& ptpairs, int img1Cols, std::string& json_file);

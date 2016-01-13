@@ -20,11 +20,7 @@
  * @author Pablo F. Alcantarilla, Jesus Nuevo
  */
 
-#include "./lib/AKAZE.h"
-
-// OpenCV
-#include <opencv2/imgproc.hpp>
-#include <opencv2/highgui.hpp>
+#include "AKAZE.h"
 
 using namespace std;
 
@@ -89,27 +85,25 @@ int main(int argc, char *argv[]) {
   t2 = cv::getTickCount();
   tdesc = 1000.0*(t2-t1) / cv::getTickFrequency();
 
-  if (options.show_results == true) {
-
-    // Summarize the computation times.
-    evolution.Show_Computation_Times();
-
-    cout << "Number of points: " << kpts.size() << endl;
-    cout << "Time Detector: " << tdet << " ms" << endl;
-    cout << "Time Descriptor: " << tdesc << " ms" << endl;
-
-    cv::Mat img_rgb = cv::Mat(cv::Size(img.cols, img.rows), CV_8UC3);
-    cvtColor(img,img_rgb, cv::COLOR_GRAY2BGR);
-    draw_keypoints(img_rgb, kpts);
-
-    cv::namedWindow("A-KAZE", cv::WINDOW_AUTOSIZE);
-    cv::imshow("A-KAZE", img_rgb);
-    cv::waitKey(0);
-  }
+  // Summarize the computation times.
+  evolution.Show_Computation_Times();
+  evolution.Save_Scale_Space();
+  cout << "Number of points: " << kpts.size() << endl;
+  cout << "Time Detector: " << tdet << " ms" << endl;
+  cout << "Time Descriptor: " << tdesc << " ms" << endl;
 
   // Save keypoints in ASCII format
   if (!kpts_path.empty())
     save_keypoints(kpts_path, kpts, desc, true);
+
+  // Check out the result visually
+  cv::Mat img_rgb = cv::Mat(cv::Size(img.cols, img.rows), CV_8UC3);
+  cvtColor(img,img_rgb, cv::COLOR_GRAY2BGR);
+  draw_keypoints(img_rgb, kpts);
+
+  cv::namedWindow("A-KAZE", cv::WINDOW_AUTOSIZE);
+  cv::imshow(img_path, img_rgb);
+  cv::waitKey(0);
 }
 
 /* ************************************************************************* */

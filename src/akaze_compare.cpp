@@ -19,6 +19,7 @@
  * @author Pablo F. Alcantarilla
  */
 
+#include "AKAZE.h"
 #include "./lib/AKAZE.h"
 
 // OpenCV
@@ -68,6 +69,8 @@ int main(int argc, char *argv[]) {
   double t1 = 0.0, t2 = 0.0;
 
   // ORB variables
+  cv::Ptr<cv::OrbFeatureDetector> orb_detector;
+  cv::Ptr<cv::DescriptorExtractor> orb_descriptor;
   vector<cv::KeyPoint> kpts1_orb, kpts2_orb;
   vector<cv::Point2f> matches_orb, inliers_orb;
   vector<vector<cv::DMatch> > dmatches_orb;
@@ -78,6 +81,7 @@ int main(int argc, char *argv[]) {
   double torb = 0.0;
 
   // BRISK variables
+  cv::BRISK dbrisk(BRISK_HTHRES,BRISK_NOCTAVES);
   vector<cv::KeyPoint> kpts1_brisk, kpts2_brisk;
   vector<cv::Point2f> matches_brisk, inliers_brisk;
   vector<vector<cv::DMatch> > dmatches_brisk;
@@ -147,22 +151,20 @@ int main(int argc, char *argv[]) {
   /* ************************************************************************* */
   // ORB Features
   //*****************
-#if CV_VERSION_EPOCH == 2
-  cv::ORB orb(ORB_MAX_KPTS, ORB_SCALE_FACTOR, ORB_PYRAMID_LEVELS,
-#else
-  cv::Ptr<cv::ORB> orb = cv::ORB::create(ORB_MAX_KPTS, ORB_SCALE_FACTOR, ORB_PYRAMID_LEVELS,
-#endif
-    ORB_EDGE_THRESHOLD, ORB_FIRST_PYRAMID_LEVEL, ORB_WTA_K, cv::ORB::HARRIS_SCORE, ORB_PATCH_SIZE);
+  orb_detector = new cv::OrbFeatureDetector(ORB_MAX_KPTS,ORB_SCALE_FACTOR,ORB_PYRAMID_LEVELS,
+                                            ORB_EDGE_THRESHOLD,ORB_FIRST_PYRAMID_LEVEL,ORB_WTA_K,ORB_PATCH_SIZE);
+  orb_descriptor = new cv::OrbDescriptorExtractor();
 
   t1 = cv::getTickCount();
 
-#if CV_VERSION_EPOCH == 2
-  orb(img1, cv::noArray(), kpts1_orb, desc1_orb, false);
-  orb(img2, cv::noArray(), kpts2_orb, desc2_orb, false);
-#else
-  orb->detectAndCompute(img1, cv::noArray(), kpts1_orb, desc1_orb, false);
-  orb->detectAndCompute(img2, cv::noArray(), kpts2_orb, desc2_orb, false);
-#endif
+  orb_detector->detect(img1,kpts1_orb);
+  orb_detector->detect(img2,kpts2_orb);
+
+  nkpts1_orb = kpts1_orb.size();
+  nkpts2_orb = kpts2_orb.size();
+
+  orb_descriptor->compute(img1,kpts1_orb,desc1_orb);
+  orb_descriptor->compute(img2,kpts2_orb,desc2_orb);
 
   matcher_l1->knnMatch(desc1_orb, desc2_orb, dmatches_orb, 2);
   matches2points_nndr(kpts1_orb,kpts2_orb,dmatches_orb,matches_orb,DRATIO);
