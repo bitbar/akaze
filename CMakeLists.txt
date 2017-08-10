@@ -5,6 +5,10 @@ if (COMMAND cmake_policy)
   cmake_policy(SET CMP0003 NEW)
 endif ()
 
+if(UNIX)
+    SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -std=gnu++0x")
+endif()
+
 # ============================================================================ #
 # Build Type. By default is release
 set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Choose the type of build, options are: Debug, Release" FORCE)
